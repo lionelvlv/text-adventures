@@ -1,7 +1,10 @@
 // api/generate.js
-// Proxies requests to Groq. Supports two modes:
-//   type: "story"  → llama-3.3-70b-versatile  (smart, handles JSON + complex narrative)
-//   type: "art"    → llama-3.1-8b-instant      (fast/cheap, just draws ASCII)
+// Proxies requests to Groq.
+//   type: "story"  → llama-3.3-70b-versatile  (strong JSON + narrative)
+//   type: "art"    → llama-3.1-8b-instant      (fast, plain text art)
+//
+// NOTE: deepseek-r1-distill-qwen-32b was removed — it's a "thinking" model
+// that wraps ALL output in <think>...</think> blocks, which breaks JSON parsing.
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -18,10 +21,9 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'GROQ_API_KEY not configured' });
   }
 
-  // Art calls use the small/fast model. Story calls use the big model.
-  const model      = type === 'art' ? 'deepseek-r1-distill-qwen-32b' : 'llama-3.3-70b-versatile';
-  const max_tokens = type === 'art' ? 250 : 500;
-  const temp       = type === 'art' ? 0.3 : 0.9;
+  const model      = type === 'art' ? 'llama-3.1-8b-instant'     : 'llama-3.3-70b-versatile';
+  const max_tokens = type === 'art' ? 300                          : 600;
+  const temp       = type === 'art' ? 0.7                          : 0.9;
 
   try {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -53,4 +55,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
-
