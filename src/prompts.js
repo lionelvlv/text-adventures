@@ -59,7 +59,7 @@ Never let the player auto-succeed a difficult task if the dice say otherwise.`
 Required JSON shape:
 {
   "story": "narrative text here",
-  "artSubject": "one specific visual subject to draw, e.g. 'a rusted pistol on a bar top' — or null",
+  "artSubject": "single simple noun from the scene e.g. wolf / castle / sword / ghost — or null",
   "suggestions": ["action 1", "action 2", "action 3", "action 4"]
 }
 
@@ -72,22 +72,13 @@ STORY rules:
 - End each turn with the player in a situation that demands a choice
 
 ARTSUBJECT rules:
-- Output ONE clear, drawable physical subject.
-- It must be a concrete noun phrase: a single object, creature, face, or silhouette.
-- NO scenes, NO actions, NO emotions, NO descriptions, NO metaphors.
-- Examples of GOOD subjects:
-  "a rusted iron gate hinge"
-  "a torn wedding veil"
-  "a guard's snarling face"
-  "a silver-threaded cloak edge"
-- Examples of BAD subjects:
-  "the crumbling kingdom"
-  "the woman's fear"
-  "the atmosphere"
-  "the situation"
-  "the young woman's haunted eyes"
-- The subject must be visually simple enough to draw in ASCII.
-- If nothing visually distinct is present, return null.
+- Output ONE single English noun (or short 2-word noun phrase) from the current scene.
+- Must be a COMMON, SIMPLE noun that appears in a standard dictionary — like "wolf", "castle", "sword", "ghost", "dragon", "book", "candle", "skull", "ship", "tree".
+- Pick whichever fits from this list if possible: wolf, bear, dragon, ghost, skull, castle, sword, knife, gun, ship, boat, horse, cat, dog, snake, spider, bat, crow, owl, robot, skeleton, vampire, witch, wizard, zombie, knight, pirate, tree, moon, star, candle, lantern, book, key, door, tower, chest, crown, shield, rose, fox, rat, fire, clock.
+- Output ONLY the noun — no articles ("a", "the"), no adjectives, no descriptions.
+- BAD: "a rusted iron gate hinge" / "the woman's fear" / "crumbling kingdom entrance"
+- GOOD: "gate" / "skull" / "sword" / "wolf" / "candle"
+- If nothing from the scene fits a simple drawable noun, return null.
 
 SUGGESTIONS rules:
 - Exactly 4 short specific actions possible RIGHT NOW

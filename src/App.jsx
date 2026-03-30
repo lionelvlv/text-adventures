@@ -31,10 +31,15 @@ async function fetchScrapedArt(subject) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ subject }),
     });
-    if (!res.ok) return { art: null, url: null };
+    if (!res.ok) {
+      console.warn('[ascii] /api/ascii returned', res.status);
+      return { art: null, url: null };
+    }
     const data = await res.json();
+    console.log('[ascii] response:', { art: !!data.art, reason: data.reason, url: data.url });
     return { art: data.art ?? null, url: data.url ?? null };
-  } catch {
+  } catch (err) {
+    console.warn('[ascii] fetch error:', err.message);
     return { art: null, url: null };
   }
 }
@@ -389,16 +394,20 @@ export default function App() {
     setBlocks(p => [...p.filter(b => !prevIds.has(b.id)), ...newBlocks]);
   }, []);
 
-  // ── Fetch ASCII art in background (uses 'art' type → fast model) ───────
-  // fetchArt: scrapes asciiart.eu — no LLM fallback (LLM art is low quality)
+  // ── Fetch ASCII art — scrapes asciiart.eu, no LLM fallback ───────────
   const fetchArt = useCallback(async (subject) => {
     if (!subject) return;
+    console.log('[art] fetching for subject:', subject);
     try {
       const { art, url: sourceUrl } = await fetchScrapedArt(subject);
-      if (art) add('art', art, { caption: null, sourceUrl });
-      // If no scraped art found, show nothing — silence is better than bad art
-    } catch {
-      // Art is optional — silent fail
+      if (art) {
+        console.log('[art] got scraped art from:', sourceUrl);
+        add('art', art, { caption: null, sourceUrl });
+      } else {
+        console.log('[art] no art found for:', subject, '— showing nothing');
+      }
+    } catch (err) {
+      console.warn('[art] error:', err.message);
     }
   }, [add]);
 

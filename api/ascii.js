@@ -118,17 +118,55 @@ const MAP = {
   robot:      ['computers', 'robots'],
 };
 
+// Extra synonyms that don't need their own MAP entry
+const SYNONYMS = {
+  gate: 'castle', gates: 'castle', keep: 'castle', fortress: 'castle', ruins: 'castle',
+  manor: 'house', cottage: 'house', cabin: 'house', inn: 'house',
+  knight: 'soldier', guard: 'soldier', warrior: 'soldier', fighter: 'soldier',
+  ranger: 'soldier', archer: 'soldier',
+  crow: 'bird', raven: 'bird', hawk: 'eagle', falcon: 'eagle', dove: 'bird',
+  werewolf: 'wolf', hound: 'dog', hounds: 'dog',
+  dagger: 'knife', blade: 'sword', axe: 'sword', staff: 'sword', spear: 'sword',
+  tome: 'book', journal: 'book', scroll: 'book', grimoire: 'book',
+  torch: 'candle', flame: 'candle', fire: 'candle',
+  goblet: 'bottle', flask: 'bottle', vial: 'bottle', potion: 'bottle',
+  gem: 'crown', jewel: 'crown', ring: 'crown', amulet: 'crown',
+  cloak: 'shield', armor: 'shield', armour: 'shield',
+  window: 'door', gate: 'castle', portcullis: 'castle',
+  figure: 'man', stranger: 'man', silhouette: 'man', shadow: 'man',
+  woman: 'woman', girl: 'woman', lady: 'woman',
+  creature: 'dragon', beast: 'dragon', monster: 'dragon', wyrm: 'dragon',
+  spirit: 'ghost', specter: 'ghost', spectre: 'ghost', wraith: 'ghost', apparition: 'ghost',
+  pumpkin: 'pumpkin', jack: 'pumpkin',
+  crypt: 'skull', grave: 'skull', tomb: 'skull', gravestone: 'skull',
+  web: 'spider', webs: 'spider',
+  ship: 'ship', galleon: 'ship', vessel: 'ship', wreck: 'ship',
+  treasure: 'chest', loot: 'chest', coffer: 'chest',
+  forest: 'tree', woods: 'tree', oak: 'tree', willow: 'tree',
+  flower: 'flower', bloom: 'flower', blossom: 'flower',
+  stars: 'star', constellation: 'star',
+  orb: 'moon', crescent: 'moon',
+  machine: 'robot', automaton: 'robot', android: 'robot',
+};
+
 function normalise(query) {
   return query.toLowerCase().trim().replace(/[^a-z\s]/g, '');
 }
 
 function lookup(query) {
   const q = normalise(query);
+  // Direct MAP hit
   if (MAP[q]) return MAP[q];
-  // Try each word, reversed (noun usually last: "iron gate" → try "gate" first)
+  // Try each word (reversed — noun is usually last)
   for (const w of q.split(/\s+/).reverse()) {
     if (MAP[w]) return MAP[w];
+    // Synonym expansion
+    const syn = SYNONYMS[w];
+    if (syn && MAP[syn]) return MAP[syn];
   }
+  // Full phrase synonym
+  const syn = SYNONYMS[q];
+  if (syn && MAP[syn]) return MAP[syn];
   return null;
 }
 
@@ -223,6 +261,7 @@ export default async function handler(req, res) {
 
   const entry = lookup(subject);
   if (!entry) {
+    console.log('[ascii] no mapping for subject:', JSON.stringify(subject));
     return res.status(200).json({ art: null, reason: 'no_mapping' });
   }
 
@@ -233,9 +272,11 @@ export default async function handler(req, res) {
     if (!arts.length) {
       return res.status(200).json({ art: null, reason: 'no_pre_blocks', url });
     }
-    return res.status(200).json({ art: randomItem(arts), url });
+    const picked = randomItem(arts);
+    console.log('[ascii] returning art for', subject, '→', url, '(', arts.length, 'options,', picked.length, 'chars)');
+    return res.status(200).json({ art: picked, url });
   } catch (err) {
-    console.error('ascii scrape error:', err.message);
+    console.error('[ascii] scrape error for', subject, '->', category+'/'+item, ':', err.message);
     return res.status(200).json({ art: null, reason: 'fetch_error', error: err.message });
   }
 }
