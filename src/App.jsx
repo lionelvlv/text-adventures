@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { GENRES, buildInitPrompt, buildActionPrompt, rollDice } from './prompts.js';
+import { getArt } from './ascii-library.js';
 
 // ─── THEME ────────────────────────────────────────────────────────────────────
 const C = {
@@ -24,25 +25,8 @@ async function callAPI(prompt, type = 'story') {
 }
 // Fetch real ASCII art from asciiart.eu via the scraper route.
 // Returns { art: string | null, url: string | null }
-async function fetchScrapedArt(subject) {
-  try {
-    const res = await fetch('/api/ascii', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject }),
-    });
-    if (!res.ok) {
-      console.warn('[ascii] /api/ascii returned', res.status);
-      return { art: null, url: null };
-    }
-    const data = await res.json();
-    console.log('[ascii] response:', { art: !!data.art, reason: data.reason, url: data.url });
-    return { art: data.art ?? null, url: data.url ?? null };
-  } catch (err) {
-    console.warn('[ascii] fetch error:', err.message);
-    return { art: null, url: null };
-  }
-}
+// ASCII art served from ./ascii-library.js
+
 
 
 // ─── PARSE STORY RESPONSE ─────────────────────────────────────────────────────
@@ -394,21 +378,15 @@ export default function App() {
     setBlocks(p => [...p.filter(b => !prevIds.has(b.id)), ...newBlocks]);
   }, []);
 
-  // ── Fetch ASCII art — scrapes asciiart.eu, no LLM fallback ───────────
-  const fetchArt = useCallback(async (subject) => {
+  // ── Fetch ASCII art in background (uses 'art' type → fast model) ───────
+    // ── Fetch ASCII art from bundled library (instant, no network) ───────────
+  const fetchArt = useCallback((subject) => {
     if (!subject) return;
-    console.log('[art] fetching for subject:', subject);
-    try {
-      const { art, url: sourceUrl } = await fetchScrapedArt(subject);
-      if (art) {
-        console.log('[art] got scraped art from:', sourceUrl);
-        add('art', art, { caption: null, sourceUrl });
-      } else {
-        console.log('[art] no art found for:', subject, '— showing nothing');
-      }
-    } catch (err) {
-      console.warn('[art] error:', err.message);
+    const art = getArt(subject);
+    if (art) {
+      add('art', art, { caption: null });
     }
+    // No art for this subject — show nothing, that's fine
   }, [add]);
 
   // ── Start game ─────────────────────────────────────────────────────────
