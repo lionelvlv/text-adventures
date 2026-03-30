@@ -72,9 +72,22 @@ STORY rules:
 - End each turn with the player in a situation that demands a choice
 
 ARTSUBJECT rules:
-- Name ONE specific visual subject relevant to this exact moment: a face, an object, a creature, a doorway, a silhouette
-- Be concrete: "a cracked pocket watch open on a desk" not "mystery atmosphere"
-- null is fine if nothing adds to the scene
+- Output ONE clear, drawable physical subject.
+- It must be a concrete noun phrase: a single object, creature, face, or silhouette.
+- NO scenes, NO actions, NO emotions, NO descriptions, NO metaphors.
+- Examples of GOOD subjects:
+  "a rusted iron gate hinge"
+  "a torn wedding veil"
+  "a guard's snarling face"
+  "a silver-threaded cloak edge"
+- Examples of BAD subjects:
+  "the crumbling kingdom"
+  "the woman's fear"
+  "the atmosphere"
+  "the situation"
+  "the young woman's haunted eyes"
+- The subject must be visually simple enough to draw in ASCII.
+- If nothing visually distinct is present, return null.
 
 SUGGESTIONS rules:
 - Exactly 4 short specific actions possible RIGHT NOW
