@@ -1,13 +1,14 @@
 // api/generate.js
-// Vercel serverless function — proxies requests to Groq API.
-// Your GROQ_API_KEY stays on the server; the browser never sees it.
+// Proxies requests to Groq. Supports two modes:
+//   type: "story"  → llama-3.3-70b-versatile  (smart, handles JSON + complex narrative)
+//   type: "art"    → llama-3.1-8b-instant      (fast/cheap, just draws ASCII)
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { prompt } = req.body;
+  const { prompt, type = 'story' } = req.body;
   if (!prompt || typeof prompt !== 'string') {
     return res.status(400).json({ error: 'Missing prompt' });
   }
@@ -17,6 +18,11 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'GROQ_API_KEY not configured' });
   }
 
+  // Art calls use the small/fast model. Story calls use the big model.
+  const model      = type === 'art' ? 'deepseek-r1-distill-qwen-32b' : 'llama-3.3-70b-versatile';
+  const max_tokens = type === 'art' ? 250 : 500;
+  const temp       = type === 'art' ? 0.3 : 0.9;
+
   try {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -25,12 +31,10 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',   // free, ~1s response time
-        max_tokens: 400,
-        temperature: 0.85,               // creative but controlled
-        messages: [
-          { role: 'user', content: prompt },
-        ],
+        model,
+        max_tokens,
+        temperature: temp,
+        messages: [{ role: 'user', content: prompt }],
       }),
     });
 
@@ -49,3 +53,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
+

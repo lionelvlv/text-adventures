@@ -22,6 +22,23 @@ async function callAPI(prompt, type = 'story') {
   if (!res.ok) throw new Error(data.error || 'API error');
   return data.text ?? '';
 }
+// Fetch real ASCII art from asciiart.eu via the scraper route.
+// Returns { art: string | null, url: string | null }
+async function fetchScrapedArt(subject) {
+  try {
+    const res = await fetch('/api/ascii', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject }),
+    });
+    if (!res.ok) return { art: null, url: null };
+    const data = await res.json();
+    return { art: data.art ?? null, url: data.url ?? null };
+  } catch {
+    return { art: null, url: null };
+  }
+}
+
 
 // ─── PARSE STORY RESPONSE ─────────────────────────────────────────────────────
 function parseResponse(raw) {
@@ -193,6 +210,11 @@ function Block({ b, onSuggest }) {
             ({b.caption})
           </div>
         )}
+        {b.sourceUrl && (
+          <div style={{ fontFamily: FONT, fontSize: 10, color: '#222', paddingLeft: 16, marginTop: 2 }}>
+            src: asciiart.eu
+          </div>
+        )}
       </div>
     );
   }
@@ -351,14 +373,22 @@ export default function App() {
   }, [add]);
 
   // ── Fetch ASCII art in background (uses 'art' type → fast model) ───────
+  // fetchArt: tries asciiart.eu first, falls back to LLM-generated art
   const fetchArt = useCallback(async (subject) => {
     if (!subject) return;
     try {
+      // 1. Real art from asciiart.eu
+      const { art: scrapedArt, url: sourceUrl } = await fetchScrapedArt(subject);
+      if (scrapedArt) {
+        add('art', scrapedArt, { caption: null, sourceUrl });
+        return;
+      }
+      // 2. LLM fallback
       const raw = await callAPI(buildArtPrompt(subject), 'art');
       const { art, caption } = parseArtResponse(raw);
-      if (art) add('art', art, { caption });
+      if (art) add('art', art, { caption, sourceUrl: null });
     } catch {
-      // Art is optional — silent fail
+      // Art is always optional — silent fail
     }
   }, [add]);
 
