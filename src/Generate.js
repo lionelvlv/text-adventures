@@ -19,9 +19,9 @@ export default async function handler(req, res) {
   }
 
   // Art calls use the small/fast model. Story calls use the big model.
-  const model      = type === 'art' ? 'llama-3.1-8b-instant' : 'llama-3.3-70b-versatile';
-  const max_tokens = type === 'art' ? 300 : 500;
-  const temp       = type === 'art' ? 0.7 : 0.9;
+  const model      = type === 'art' ? 'deepseek-r1-distill-qwen-32b' : 'llama-3.3-70b-versatile';
+  const max_tokens = type === 'art' ? 250 : 500;
+  const temp       = type === 'art' ? 0.3 : 0.9;
 
   try {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
