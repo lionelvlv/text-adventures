@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { GENRES, buildInitPrompt, buildActionPrompt, buildArtPrompt, rollDice } from './prompts.js';
+import { GENRES, buildInitPrompt, buildActionPrompt, rollDice } from './prompts.js';
 
 // ─── THEME ────────────────────────────────────────────────────────────────────
 const C = {
@@ -345,50 +345,60 @@ export default function App() {
 
   // ── Genre list ─────────────────────────────────────────────────────────
   const renderGenreList = useCallback((activeIdx) => {
-    if (genreIds.current.length) setBlocks(p => p.filter(b => !genreIds.current.includes(b.id)));
-    const ids = [];
-    ids.push(add('gap'));
-    ids.push(add('dim', 'SELECT YOUR ADVENTURE TYPE'));
-    ids.push(add('dim', 'Up/Down  ·  Enter to confirm  ·  1-6 to jump'));
-    ids.push(add('gap'));
-    GENRES.forEach((g, i) => ids.push(add(i === activeIdx ? 'text' : 'dim', `  ${i === activeIdx ? '>' : ' '} ${g.label}`)));
-    ids.push(add('gap'));
-    genreIds.current = ids;
-  }, [add]);
+    // Build new blocks atomically — filter old list and append new in one setState
+    // to avoid the async race where both old+new appear simultaneously.
+    const prevIds = new Set(genreIds.current);
+    const newBlocks = [];
+    const newIds = [];
+    const mk = (type, text = '', extra = {}) => {
+      const id = crypto.randomUUID();
+      newIds.push(id);
+      newBlocks.push({ id, type, text, ...extra });
+      return id;
+    };
+    mk('gap');
+    mk('dim', 'SELECT YOUR ADVENTURE TYPE');
+    mk('dim', 'Up/Down  ·  Enter to confirm  ·  1-6 to jump');
+    mk('gap');
+    GENRES.forEach((g, i) => mk(i === activeIdx ? 'text' : 'dim', `  ${i === activeIdx ? '>' : ' '} ${g.label}`));
+    mk('gap');
+    genreIds.current = newIds;
+    setBlocks(p => [...p.filter(b => !prevIds.has(b.id)), ...newBlocks]);
+  }, []);
 
   // ── Settings ───────────────────────────────────────────────────────────
   const renderSettings = useCallback((activeIdx, cur) => {
-    if (settingIds.current.length) setBlocks(p => p.filter(b => !settingIds.current.includes(b.id)));
-    const ids = [];
-    ids.push(add('gap'));
-    ids.push(add('dim', 'GAME SETTINGS'));
-    ids.push(add('dim', 'Up/Down to select  ·  Space / ← → to toggle  ·  Enter to begin'));
-    ids.push(add('gap'));
+    const prevIds = new Set(settingIds.current);
+    const newBlocks = [];
+    const newIds = [];
+    const mk = (type, text = '', extra = {}) => {
+      const id = crypto.randomUUID();
+      newIds.push(id);
+      newBlocks.push({ id, type, text, ...extra });
+    };
+    mk('gap');
+    mk('dim', 'GAME SETTINGS');
+    mk('dim', 'Up/Down to select  ·  Space / ← → to toggle  ·  Enter to begin');
+    mk('gap');
     SETTINGS_CONFIG.forEach((s, i) => {
-      ids.push(add('setting-row', '', { label: s.label, value: cur[s.key] ? s.on : s.off, active: i === activeIdx }));
+      mk('setting-row', '', { label: s.label, value: cur[s.key] ? s.on : s.off, active: i === activeIdx });
     });
-    ids.push(add('gap'));
-    ids.push(add('dim', '  Enter to begin adventure'));
-    settingIds.current = ids;
-  }, [add]);
+    mk('gap');
+    mk('dim', '  Enter to begin adventure');
+    settingIds.current = newIds;
+    setBlocks(p => [...p.filter(b => !prevIds.has(b.id)), ...newBlocks]);
+  }, []);
 
   // ── Fetch ASCII art in background (uses 'art' type → fast model) ───────
-  // fetchArt: tries asciiart.eu first, falls back to LLM-generated art
+  // fetchArt: scrapes asciiart.eu — no LLM fallback (LLM art is low quality)
   const fetchArt = useCallback(async (subject) => {
     if (!subject) return;
     try {
-      // 1. Real art from asciiart.eu
-      const { art: scrapedArt, url: sourceUrl } = await fetchScrapedArt(subject);
-      if (scrapedArt) {
-        add('art', scrapedArt, { caption: null, sourceUrl });
-        return;
-      }
-      // 2. LLM fallback
-      const raw = await callAPI(buildArtPrompt(subject), 'art');
-      const { art, caption } = parseArtResponse(raw);
-      if (art) add('art', art, { caption, sourceUrl: null });
+      const { art, url: sourceUrl } = await fetchScrapedArt(subject);
+      if (art) add('art', art, { caption: null, sourceUrl });
+      // If no scraped art found, show nothing — silence is better than bad art
     } catch {
-      // Art is always optional — silent fail
+      // Art is optional — silent fail
     }
   }, [add]);
 
